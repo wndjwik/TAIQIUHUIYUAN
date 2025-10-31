@@ -4,10 +4,14 @@ const cors = require('cors');
 const path = require('path');
 
 // 导入路由
-const memberRoutes = require('./routes/members');
+const membersRoutes = require('./routes/members');
 const rechargeRoutes = require('./routes/recharge');
 const consumeRoutes = require('./routes/consume');
 const dataRoutes = require('./routes/data');
+const employeeRoutes = require('./routes/employees');
+
+// 导入控制器
+const employeeController = require('./controllers/employeeController');
 
 // 导入备份服务
 const backupService = require('./services/backupService');
@@ -16,6 +20,7 @@ const backupService = require('./services/backupService');
 const Member = require('./models/Member');
 const RechargeRecord = require('./models/RechargeRecord');
 const ConsumeRecord = require('./models/ConsumeRecord');
+const Employee = require('./models/Employee');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -64,11 +69,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API 路由
-app.use('/api/members', memberRoutes);
+// 使用路由
+app.use('/api/members', membersRoutes);
 app.use('/api/recharge', rechargeRoutes);
 app.use('/api/consume', consumeRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/employees', employeeRoutes);
+
+// 认证路由（使用员工路由中的登录接口，路径为/api/employees/login）
 
 // 根路径接口
 app.get('/', (req, res) => {
@@ -107,6 +115,7 @@ const initializeDatabase = async () => {
     await Member.sync({ force: false }); // force: false 表示如果表已存在则不删除重建
     await RechargeRecord.sync({ force: false });
     await ConsumeRecord.sync({ force: false });
+    await Employee.sync({ force: false });
     
     console.log('✅ 数据库表同步完成');
     
@@ -118,25 +127,9 @@ const initializeDatabase = async () => {
   }
 };
 
-// 插入示例数据
+// 插入示例数据 - 已移除，系统将从空数据库开始
 const insertSampleData = async () => {
-  try {
-    // 检查是否已有数据
-    const memberCount = await Member.count();
-    
-    if (memberCount === 0) {
-      // 插入示例会员
-      await Member.bulkCreate([
-        { member_id: '800001', name: '张三', phone: '13800138001', balance: 500.00 },
-        { member_id: '800002', name: '李四', phone: '13800138002', balance: 300.00 },
-        { member_id: '800003', name: '王五', phone: '13800138003', balance: 800.00 }
-      ]);
-      
-      console.log('✅ 示例会员数据插入完成');
-    }
-  } catch (error) {
-    console.log('示例数据插入失败或已存在:', error.message);
-  }
+  console.log('系统将从空数据库开始运行，不插入示例数据');
 };
 
 // 启动服务器

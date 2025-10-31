@@ -1,25 +1,6 @@
 import { defineStore } from 'pinia'
-
-// 单独的用户信息管理函数
-export const getUserInfo = () => {
-  try {
-    const storedUserInfo = localStorage.getItem('userInfo')
-    if (storedUserInfo) {
-      return JSON.parse(storedUserInfo)
-    }
-  } catch (e) {
-    console.error('解析用户信息失败:', e)
-  }
-  return null
-}
-
-export const setUserInfo = (user) => {
-  localStorage.setItem('userInfo', JSON.stringify(user))
-}
-
-export const clearUserInfo = () => {
-  localStorage.removeItem('userInfo')
-}
+// 从user.js导入用户信息管理函数，避免重复定义
+import { getUserInfo, setUserInfo, clearUserInfo } from './user.js'
 
 export const useAppStore = defineStore('app', {
   state: () => ({

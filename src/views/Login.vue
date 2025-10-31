@@ -6,8 +6,8 @@
       </template>
       
       <el-form ref="loginFormRef" :model="loginForm" :rules="rules" label-width="80px">
-        <el-form-item label="账号" prop="username">
-          <el-input v-model="loginForm.username" placeholder="请输入账号" />
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="loginForm.phone" placeholder="请输入手机号" />
         </el-form-item>
         
         <el-form-item label="密码" prop="password">
@@ -32,20 +32,21 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { setUserInfo } from '../stores/user.js'
-import { loginAPI } from '../services/api.js'
+import { employeeAPI } from '../services/api.js'
 import { loginIPC, checkEnvironment } from '../services/ipc-api.js'
 
 const router = useRouter()
 const loginFormRef = ref(null)
 const loginForm = ref({
-  username: '',
+  phone: '',
   password: ''
 })
 
 // 表单验证规则
 const rules = {
-  username: [
-    { required: true, message: '请输入账号', trigger: 'blur' }
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' }
@@ -61,7 +62,7 @@ const getAPI = () => {
     return loginIPC;
   } else {
     console.log('使用HTTP API进行登录');
-    return loginAPI;
+    return employeeAPI;
   }
 };
 
@@ -73,23 +74,10 @@ const handleLogin = async () => {
   }
   
   try {
-    // 管理员账号密码验证（硬编码）
-    if (loginForm.value.username === 'admin' && loginForm.value.password === 'zh20050114') {
-      const userInfo = {
-        name: '管理员',
-        role: 'admin',
-        account: loginForm.value.username
-      }
-      setUserInfo(userInfo)
-      ElMessage.success('登录成功')
-      router.push('/')
-      return
-    }
-    
-    // 尝试使用API进行登录验证
+    // 尝试使用API进行登录验证（使用员工表验证）
     const api = getAPI()
     const response = await api.login({
-      username: loginForm.value.username,
+      phone: loginForm.value.phone,
       password: loginForm.value.password
     })
     

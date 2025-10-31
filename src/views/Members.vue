@@ -160,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { Search, Plus, User } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { memberAPI, rechargeAPI, consumeAPI } from '../services/api.js'
@@ -359,6 +359,20 @@ const showRechargeDialog = async (member) => {
         }
       )
       
+      // 先生成语音祝福文本，不等待播放完成
+      let blessingText;
+      try {
+        const blessingResult = await generateBlessingText({
+          memberName: member.name,
+          actionType: 'recharge',
+          amount: amount,
+          gender: member.gender
+        });
+        blessingText = blessingResult;
+      } catch (error) {
+        console.log('先生成语音文本失败，将在操作完成后重试:', error);
+      }
+      
       // 用户确认后执行充值
       await rechargeApi.recharge({
         member_id: member.memberId,
@@ -375,7 +389,16 @@ const showRechargeDialog = async (member) => {
       
       // 生成并播放充值祝福语音
       try {
-        await generateAndPlayBlessing(member, 'recharge', amount);
+        // 使用预设的参数格式调用generateAndPlayBlessing
+        generateAndPlayBlessing({
+          memberName: member.name,
+          actionType: 'recharge',
+          amount: amount,
+          gender: member.gender
+        }, {
+          preset: amount >= 500 ? 'energetic' : 'enthusiastic',
+          rate: 1.4 // 提高语速以减少感知延迟
+        }).catch(err => console.log('语音播放失败:', err));
       } catch (error) {
         console.log('播放语音祝福失败:', error);
         // 不影响主要功能
@@ -420,6 +443,21 @@ const showConsumeDialog = async (member) => {
         }
       )
       
+      // 先生成语音祝福文本，不等待播放完成
+      let blessingText;
+      try {
+        const blessingResult = await generateBlessingText({
+          memberName: member.name,
+          actionType: 'consume',
+          amount: amount,
+          gender: member.gender,
+          balance: afterBalance
+        });
+        blessingText = blessingResult;
+      } catch (error) {
+        console.log('先生成语音文本失败，将在操作完成后重试:', error);
+      }
+      
       // 用户确认后执行消费
       await consumeApi.consume({
         member_id: member.memberId,
@@ -436,7 +474,17 @@ const showConsumeDialog = async (member) => {
       
       // 生成并播放消费祝福语音
       try {
-        await generateAndPlayBlessing(member, 'consume', amount, afterBalance);
+        // 使用预设的参数格式调用generateAndPlayBlessing
+        generateAndPlayBlessing({
+          memberName: member.name,
+          actionType: 'consume',
+          amount: amount,
+          gender: member.gender,
+          balance: afterBalance
+        }, {
+          preset: 'friendly',
+          rate: 1.4 // 提高语速以减少感知延迟
+        }).catch(err => console.log('语音播放失败:', err));
       } catch (error) {
         console.log('播放语音祝福失败:', error);
         // 不影响主要功能
@@ -483,10 +531,34 @@ const deleteMember = async (member) => {
   })
 }
 
-// 组件挂载时加载数据
-onMounted(() => {
-  loadMembers()
+// 组件挂载时加载数据并预加载语音服务
+onMounted(async () => {
+  await loadMembers()
+  
+  // 预加载语音服务，确保在用户操作前已初始化
+  preloadSpeechService()
 })
+
+// 页面卸载前清理语音队列
+onBeforeUnmount(() => {
+  // 这里可以添加清理逻辑，如果需要
+})
+
+// 预加载语音服务
+const preloadSpeechService = () => {
+  // 播放一个静默语音以初始化服务
+  const preloadSilence = () => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0; // 静默播放
+      speechSynthesis.speak(utterance);
+      // 立即停止，仅用于初始化
+      setTimeout(() => speechSynthesis.cancel(), 10);
+    }
+  };
+  
+  preloadSilence();
+};
 </script>
 
 <style scoped>

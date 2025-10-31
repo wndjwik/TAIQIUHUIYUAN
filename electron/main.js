@@ -6,6 +6,9 @@ const fs = require('fs')
 let backendProcess = null
 let mainWindow = null
 
+
+
+// 启动后端服务函数
 function startBackendServer() {
   const backendPath = path.join(__dirname, '../backend')
   
@@ -44,16 +47,19 @@ function startBackendServer() {
           
           // 修改环境变量使用备用端口
           process.env.PORT = altPort.toString()
+          backendPort = altPort.toString()
           break
         }
       }
+    } else {
+      backendPort = port.toString()
     }
 
     // 启动后端服务
     backendProcess = spawn('node', ['src/app.js'], {
       cwd: backendPath,
       stdio: 'pipe',
-      env: { ...process.env, PORT: process.env.PORT || '3001' }
+      env: { ...process.env, PORT: backendPort }
     })
 
     backendProcess.stdout.on('data', (data) => {
@@ -127,11 +133,88 @@ app.on('activate', () => {
   }
 })
 
+// 存储实际使用的后端端口
+let backendPort = process.env.PORT || '3001';
+
+// 修改startBackend函数中的端口记录
+function startBackendServer() {
+  const backendPath = path.join(__dirname, '../backend')
+  
+  // 检查backend目录是否存在
+  if (!fs.existsSync(backendPath)) {
+    console.error('Backend directory not found:', backendPath)
+    return
+  }
+
+  // 检查后端端口是否可用
+  const net = require('net')
+  const isPortAvailable = (port) => {
+    return new Promise((resolve) => {
+      const server = net.createServer()
+      server.once('error', () => resolve(false))
+      server.once('listening', () => {
+        server.close()
+        resolve(true)
+      })
+      server.listen(port)
+    })
+  }
+
+  // 尝试启动后端服务
+  const startBackend = async () => {
+    const port = 3001
+    
+    // 检查端口是否可用
+    if (!await isPortAvailable(port)) {
+      console.log(`⚠️  端口 ${port} 已被占用，尝试使用备用端口...`)
+      
+      // 尝试其他端口
+      for (let altPort = 3002; altPort <= 3010; altPort++) {
+        if (await isPortAvailable(altPort)) {
+          console.log(`✅ 使用备用端口 ${altPort}`)
+          
+          // 修改环境变量使用备用端口
+          process.env.PORT = altPort.toString()
+          backendPort = altPort.toString()
+          break
+        }
+      }
+    } else {
+      backendPort = port.toString()
+    }
+
+    // 启动后端服务
+    backendProcess = spawn('node', ['src/app.js'], {
+      cwd: backendPath,
+      stdio: 'pipe',
+      env: { ...process.env, PORT: backendPort }
+    })
+
+    backendProcess.stdout.on('data', (data) => {
+      console.log(`Backend: ${data}`)
+    })
+
+    backendProcess.stderr.on('data', (data) => {
+      console.error(`Backend Error: ${data}`)
+    })
+
+    backendProcess.on('close', (code) => {
+      console.log(`Backend process exited with code ${code}`)
+    })
+  }
+
+  startBackend()
+}
+
 // IPC通讯处理
 ipcMain.handle('api-request', async (event, { method, path, data }) => {
   try {
+    // 使用实际的后端端口
+    const baseUrl = `http://localhost:${backendPort}`
+    console.log(`发送API请求: ${baseUrl}/api${path}`)
+    
     // 这里将请求转发到后端服务
-    const response = await fetch(`http://localhost:3001/api${path}`, {
+    const response = await fetch(`${baseUrl}/api${path}`, {
       method: method,
       headers: {
         'Content-Type': 'application/json',

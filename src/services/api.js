@@ -1,47 +1,15 @@
 // API服务 - 统一管理后端接口调用
 
-// 模拟后端登录验证
-const mockLogin = async (credentials) => {
-  // 预设的管理员账号
-  const adminUser = {
-    id: '1',
-    username: 'admin',
-    password: 'zh20050114', // 注意：实际项目中密码应该加密存储
-    name: '管理员',
-    role: 'admin'
-  }
-
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 500))
-
-  if (credentials.username === adminUser.username && credentials.password === adminUser.password) {
-    return {
-      success: true,
-      data: {
-        id: adminUser.id,
-        username: adminUser.username,
-        name: adminUser.name,
-        role: adminUser.role
-      }
-    }
-  } else {
-    return {
-      success: false,
-      message: '账号或密码错误'
-    }
-  }
-}
-
 // 登录API
 export const loginAPI = {
   login: async (credentials) => {
     try {
-      // 在实际项目中，这里应该调用真实的后端API
-      // const response = await axios.post('/api/auth/login', credentials)
-      // return response.data
-      
-      // 使用模拟数据
-      return await mockLogin(credentials)
+      // 调用真实的后端API，使用员工表进行验证
+      const response = await request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      })
+      return response
     } catch (error) {
       console.error('登录失败:', error)
       throw error
@@ -64,29 +32,55 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 // 统一的请求函数
-const request = async (url, options = {}) => {
+export const request = async (url, options = {}) => {
+
   try {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    // 提取options中的params参数
+    const { params, ...fetchOptions } = options;
     
-    if (!data.success) {
-      throw new Error(data.message || '请求失败');
+    // 构建完整URL
+    let fullUrl = `${API_BASE_URL}${url}`;
+    
+    // 如果有params参数，将其转换为查询字符串并附加到URL
+    if (params && typeof params === 'object') {
+      try {
+        const queryString = new URLSearchParams(params).toString();
+        if (queryString) {
+          fullUrl += `?${queryString}`;
+        }
+      } catch (paramsError) {
+        console.error('参数处理错误:', paramsError);
+      }
+    }
+    
+
+    
+    let response;
+    try {
+      response = await fetch(fullUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...fetchOptions.headers,
+        },
+        ...fetchOptions,
+      });
+      
+
+    } catch (fetchError) {
+      console.error('Fetch请求失败:', fetchError);
+      throw new Error(`网络请求失败: ${fetchError.message}`);
     }
 
-    return data;
+    try {
+      const data = await response.json();
+
+      return data;
+    } catch (jsonError) {
+      console.error('响应解析错误:', jsonError);
+      throw new Error(`响应解析失败: ${jsonError.message}`);
+    }
   } catch (error) {
-    console.error('API请求错误:', error);
+    console.error('API请求处理异常:', error);
     throw error;
   }
 };
@@ -172,6 +166,49 @@ export const backupAPI = {
 };
 
 // 导出统一的API对象
+// 员工相关API
+export const employeeAPI = {
+  // 登录
+  login: (loginData) => request('/employees/login', {
+    method: 'POST',
+    body: JSON.stringify(loginData),
+  }),
+  
+  // 获取所有员工
+  getAllEmployees: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return request(`/employees${queryString ? '?' + queryString : ''}`);
+  },
+  
+  // 获取单个员工
+  getEmployeeById: (id) => request(`/employees/${id}`),
+  
+  // 创建员工
+  createEmployee: (employeeData) => request('/employees', {
+    method: 'POST',
+    body: JSON.stringify(employeeData),
+  }),
+  
+  // 更新员工
+  updateEmployee: (id, employeeData) => {
+    return request(`/employees/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(employeeData),
+    });
+  },
+  
+  // 删除员工
+  deleteEmployee: (id) => request(`/employees/${id}`, {
+    method: 'DELETE',
+  }),
+  
+  // 修改密码
+  changePassword: (id, passwordData) => request(`/employees/${id}/password`, {
+    method: 'PUT',
+    body: JSON.stringify(passwordData),
+  }),
+};
+
 export const api = {
   // 会员相关
   getAllMembers: memberAPI.getAllMembers,
@@ -179,6 +216,15 @@ export const api = {
   createMember: memberAPI.createMember,
   updateMember: memberAPI.updateMember,
   deleteMember: memberAPI.deleteMember,
+  
+  // 员工相关
+  login: employeeAPI.login,
+  getAllEmployees: employeeAPI.getAllEmployees,
+  getEmployeeById: employeeAPI.getEmployeeById,
+  createEmployee: employeeAPI.createEmployee,
+  updateEmployee: employeeAPI.updateEmployee,
+  deleteEmployee: employeeAPI.deleteEmployee,
+  changePassword: employeeAPI.changePassword,
   
   // 充值相关
   recharge: rechargeAPI.recharge,

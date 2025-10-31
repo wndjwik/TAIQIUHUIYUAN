@@ -1,68 +1,88 @@
 <template>
   <div id="app" :class="{ 'dark-mode': appStore.isDarkMode }">
-    <el-container class="app-container">
-      <!-- 顶部导航栏 -->
-      <el-header class="app-header">
-          <el-row :gutter="20">
-            <el-col :span="24">
-              <div class="app-title">{{ currentTitle }}</div>
-            </el-col>
-          </el-row>
-        </el-header>
-      
-      <el-container>
-        <!-- 左侧菜单 -->
-        <el-aside width="200px" class="app-sidebar">
-          <el-menu
-            :default-active="activeMenu"
-            @select="onMenuChange"
-            background-color="#2E86AB"
-            text-color="#fff"
-            active-text-color="#ffd04b"
-          >
-            <el-menu-item index="0">
-              <el-icon><HomeFilled /></el-icon>
-              <span>首页</span>
-            </el-menu-item>
-            <el-menu-item index="1">
-              <el-icon><User /></el-icon>
-              <span>会员管理</span>
-            </el-menu-item>
-            <el-menu-item index="2">
-              <el-icon><Document /></el-icon>
-              <span>充值记录</span>
-            </el-menu-item>
-            <el-menu-item index="3">
-              <el-icon><Document /></el-icon>
-              <span>消费记录</span>
-            </el-menu-item>
-            <el-menu-item index="4">
-              <el-icon><Setting /></el-icon>
-              <span>系统设置</span>
-            </el-menu-item>
-
-          </el-menu>
-        </el-aside>
+    <!-- 登录页面不需要显示导航布局 -->
+    <template v-if="route.path === '/login'">
+      <router-view />
+    </template>
+    <!-- 其他页面显示完整导航布局 -->
+    <template v-else>
+      <el-container class="app-container">
+        <!-- 顶部导航栏 -->
+        <el-header class="app-header">
+            <el-row :gutter="20" type="flex" justify="space-between" align="middle">
+              <el-col>
+                <div class="app-title">{{ currentTitle }}</div>
+              </el-col>
+              <el-col>
+                <div class="user-info">
+                  <span class="user-name">{{ userInfo?.name || '' }}</span>
+                  <el-button type="danger" text @click="handleLogout" class="logout-btn">
+                    <el-icon><SwitchButton /></el-icon>
+                    <span>退出登录</span>
+                  </el-button>
+                </div>
+              </el-col>
+            </el-row>
+          </el-header>
         
-        <!-- 主内容区 -->
-        <el-main class="app-main">
-          <router-view />
-        </el-main>
-      </el-container>
-    </el-container>
+        <el-container>
+          <!-- 左侧菜单 -->
+          <el-aside width="200px" class="app-sidebar">
+            <el-menu
+              :default-active="activeMenu"
+              @select="onMenuChange"
+              background-color="#2E86AB"
+              text-color="#fff"
+              active-text-color="#ffd04b"
+            >
+              <el-menu-item index="0">
+                <el-icon><HomeFilled /></el-icon>
+                <span>首页</span>
+              </el-menu-item>
+              <el-menu-item index="1">
+                <el-icon><User /></el-icon>
+                <span>会员管理</span>
+              </el-menu-item>
+              <el-menu-item index="2">
+                <el-icon><Document /></el-icon>
+                <span>充值记录</span>
+              </el-menu-item>
+              <el-menu-item index="3">
+                <el-icon><Document /></el-icon>
+                <span>消费记录</span>
+              </el-menu-item>
+              <el-menu-item index="4">
+                <el-icon><User /></el-icon>
+                <span>员工管理</span>
+              </el-menu-item>
+              <el-menu-item index="5">
+                <el-icon><Setting /></el-icon>
+                <span>系统设置</span>
+              </el-menu-item>
 
-    <!-- 悬浮球主题切换按钮 -->
-    <div 
-      class="floating-theme-toggle"
-      @click="appStore.toggleTheme()"
-      :class="{ 'dark-mode': appStore.isDarkMode }"
-      title="切换主题"
-    >
-      <el-icon class="theme-icon">
-        <Sunny v-if="appStore.isDarkMode" />
-        <MoonNight v-else />
-      </el-icon>
-    </div>
+            </el-menu>
+          </el-aside>
+          
+          <!-- 主内容区 -->
+          <el-main class="app-main">
+            <router-view />
+          </el-main>
+        </el-container>
+      </el-container>
+
+      <!-- 悬浮球主题切换按钮 -->
+      <div 
+        class="floating-theme-toggle"
+        @click="appStore.toggleTheme()"
+        :class="{ 'dark-mode': appStore.isDarkMode }"
+        title="切换主题"
+      >
+        <el-icon class="theme-icon">
+          <Sunny v-if="appStore.isDarkMode" />
+          <MoonNight v-else />
+        </el-icon>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -70,21 +90,24 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from './stores/app'
+import userStore, { clearUserInfo, getUserInfo } from './stores/user'
 import {
   HomeFilled,
   User,
   Document,
   Setting,
   MoonNight,
-  Sunny
+  Sunny,
+  SwitchButton
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const activeMenu = ref('0')
 const appStore = useAppStore()
+const userInfo = ref(null)
 
-const menuRoutes = ['/', '/members', '/recharge-records', '/consume-records', '/settings']
+const menuRoutes = ['/', '/members', '/recharge-records', '/consume-records', '/employees', '/settings']
 
 // 根据当前路由设置激活菜单
 const updateActiveMenu = () => {
@@ -98,6 +121,7 @@ const currentTitle = computed(() => {
     '/members': '会员管理',
     '/recharge-records': '充值记录',
     '/consume-records': '消费记录',
+    '/employees': '员工管理',
     '/settings': '系统设置'
   }
   return titles[route.path] || '台球厅会员管理系统'
@@ -108,13 +132,22 @@ const onMenuChange = (index) => {
   router.push(menuRoutes[parseInt(index)])
 }
 
+// 退出登录处理
+const handleLogout = () => {
+  // 清除用户信息
+  clearUserInfo()
+  // 跳转到登录页面
+  router.push('/login')
+}
+
 // 监听路由变化
 watch(() => route.path, updateActiveMenu)
 
-// 初始化时设置菜单状态和应用主题
+// 初始化时设置菜单状态、应用主题和用户信息
 onMounted(() => {
   updateActiveMenu()
   appStore.applyTheme()
+  userInfo.value = getUserInfo()
 })
 
 // 主题配置
@@ -171,11 +204,33 @@ html.dark, body.dark {
   color: white;
   padding: 0 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
 }
 
 .app-title {
   font-size: 18px;
   font-weight: bold;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.logout-btn {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.logout-btn .el-icon {
+  margin-right: 4px;
 }
 
 .app-sidebar {
