@@ -28,7 +28,11 @@
           ¥{{ formatAmount(scope.row.amount) }}
         </template>
       </el-table-column>
-      <el-table-column prop="time" label="消费时间" width="180" />
+      <el-table-column prop="time" label="消费时间" width="200">
+        <template #default="scope">
+          {{ scope.row.time }}
+        </template>
+      </el-table-column>
       <el-table-column prop="operator" label="操作员" width="120" />
     </el-table>
     
@@ -87,7 +91,7 @@ export default {
           memberId: record.member_id,
           name: record.member_name,
           amount: parseFloat(record.amount),
-          time: record.createdAt,
+          time: formatDateTime(record.createdAt),
           operator: record.operator
         }))
         total.value = response.data.total
@@ -119,6 +123,19 @@ export default {
 
     const formatAmount = (amount) => {
       return amount.toLocaleString('zh-CN')
+    }
+    
+    // 格式化日期时间
+    const formatDateTime = (dateTime) => {
+      if (!dateTime) return ''
+      const date = new Date(dateTime)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const seconds = String(date.getSeconds()).padStart(2, '0')
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
     }
 
     onMounted(() => {

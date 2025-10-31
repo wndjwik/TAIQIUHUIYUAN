@@ -1,12 +1,12 @@
 <template>
   <div class="employees-container">
-    <el-card class="box-card">
-      <template #header>
-        <div class="card-header">
-          <span>员工管理</span>
-          <el-button type="primary" @click="showAddEmployeeDialog">新增员工</el-button>
-        </div>
-      </template>
+      <el-card class="box-card">
+        <template #header>
+          <div class="card-header">
+            <span>员工管理</span>
+            <el-button type="primary" @click="showAddEmployeeDialog">新增员工</el-button>
+          </div>
+        </template>
 
       <!-- 搜索框 -->
       <el-form :inline="true" :model="searchForm" class="search-form">
@@ -61,8 +61,7 @@
                     @click="toggleEmployeeStatus(scope.row)"
                     :type="scope.row.status === 'active' ? 'danger' : 'success'"
                   >
-                    <i :class="scope.row.status === 'active' ? 'el-icon-delete' : 'el-icon-circle-check'"
-></i>
+                    <i :class="scope.row.status === 'active' ? 'el-icon-delete' : 'el-icon-circle-check'"></i>
                     {{ scope.row.status === 'active' ? '禁用' : '启用' }}
                   </el-dropdown-item>
                   <el-dropdown-item 
@@ -109,7 +108,10 @@
           <el-input v-model="employeeForm.phone" placeholder="请输入手机号"></el-input>
         </el-form-item>
         <el-form-item label="密码" v-if="dialogMode === 'add'" prop="password">
-          <el-input v-model="employeeForm.password" type="password" placeholder="请输入密码"></el-input>
+          <el-input v-model="employeeForm.password" type="password" placeholder="密码长度不少于6位，只能包含字母和数字"></el-input>
+        </el-form-item>
+        <el-form-item label="确认密码" v-if="dialogMode === 'add'" prop="confirmPassword">
+          <el-input v-model="employeeForm.confirmPassword" type="password" placeholder="请确认密码"></el-input>
         </el-form-item>
         <el-form-item label="权限" prop="role">
           <el-radio-group v-model="employeeForm.role">
@@ -136,7 +138,7 @@
           <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入原密码"></el-input>
         </el-form-item>
         <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码"></el-input>
+          <el-input v-model="passwordForm.newPassword" type="password" placeholder="密码长度不少于6位，只能包含字母和数字"></el-input>
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword">
           <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请确认新密码"></el-input>
@@ -153,9 +155,10 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { api } from '../services/api.js';
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '@/services/api.js'
+// 暂时移除getUserInfo导入
 
 export default {
   name: 'Employees',
@@ -172,6 +175,8 @@ export default {
     const dialogMode = ref('add'); // 'add' 或 'edit'
     const currentEmployeeId = ref(null);
     const dialogTitle = ref(''); // 对话框标题
+    
+    // 暂时移除权限相关计算属性
     
     // 搜索表单
     const searchForm = reactive({
@@ -193,6 +198,7 @@ export default {
       name: '',
       phone: '',
       password: '',
+      confirmPassword: '',
       role: 'employee',
       status: 'active'
     });
@@ -218,7 +224,21 @@ export default {
       ],
       password: [
         { required: () => dialogMode.value === 'add', message: '请输入密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+        { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+        { pattern: /^[A-Za-z0-9]+$/, message: '密码只能包含字母和数字', trigger: 'blur' }
+      ],
+      confirmPassword: [
+        { required: () => dialogMode.value === 'add', message: '请确认密码', trigger: 'blur' },
+        {
+          validator: (rule, value, callback) => {
+            if (value !== employeeForm.password) {
+              callback(new Error('两次输入的密码不一致'));
+            } else {
+              callback();
+            }
+          },
+          trigger: 'blur'
+        }
       ]
     });
     
@@ -228,7 +248,8 @@ export default {
       ],
       newPassword: [
         { required: true, message: '请输入新密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+        { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+        { pattern: /^[A-Za-z0-9]+$/, message: '密码只能包含字母和数字', trigger: 'blur' }
       ],
       confirmPassword: [
         { required: true, message: '请确认新密码', trigger: 'blur' },
@@ -352,6 +373,7 @@ export default {
         name: '',
         phone: '',
         password: '',
+        confirmPassword: '',
         role: 'employee',
         status: 'active'
       });
@@ -450,8 +472,8 @@ export default {
               let data;
               
               if (dialogMode.value === 'add') {
-                // 新增 - 移除employee_id字段，确保必填字段存在
-                const { employee_id, ...employeeData } = employeeForm;
+                // 新增 - 移除不需要的字段，确保必填字段存在
+                const { employee_id, confirmPassword, ...employeeData } = employeeForm;
                 
                 // 确保角色字段存在且有效
                 if (!employeeData.role || !['admin', 'employee'].includes(employeeData.role)) {

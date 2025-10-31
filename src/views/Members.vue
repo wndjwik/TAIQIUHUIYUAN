@@ -166,6 +166,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { memberAPI, rechargeAPI, consumeAPI } from '../services/api.js'
 import { memberIPC, rechargeIPC, consumeIPC, checkEnvironment } from '../services/ipc-api.js'
 import { generateAndPlayBlessing } from '../services/difyService.js'
+import { getUserInfo } from '../stores/user'
 
 // 智能API选择器 - 根据环境自动选择HTTP API或IPC API
 const useAPI = () => {
@@ -373,11 +374,15 @@ const showRechargeDialog = async (member) => {
         console.log('先生成语音文本失败，将在操作完成后重试:', error);
       }
       
+      // 获取当前登录的操作员信息
+      const currentUser = getUserInfo()
+      const operatorName = currentUser?.name || currentUser?.username || '管理员'
+      
       // 用户确认后执行充值
       await rechargeApi.recharge({
         member_id: member.memberId,
         amount: amount,
-        operator: '管理员'
+        operator: operatorName
       })
       ElMessage.success(`充值成功：¥${amount.toFixed(2)}`)
       
@@ -458,11 +463,15 @@ const showConsumeDialog = async (member) => {
         console.log('先生成语音文本失败，将在操作完成后重试:', error);
       }
       
+      // 获取当前登录的操作员信息
+      const currentUser = getUserInfo()
+      const operatorName = currentUser?.name || currentUser?.username || '管理员'
+      
       // 用户确认后执行消费
       await consumeApi.consume({
         member_id: member.memberId,
         amount: amount,
-        operator: '管理员'
+        operator: operatorName
       })
       ElMessage.success(`消费成功：¥${amount.toFixed(2)}`)
       

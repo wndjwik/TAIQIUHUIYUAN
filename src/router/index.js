@@ -1,48 +1,61 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { checkLoginStatus } from '@/stores/user.js'
+import { checkLoginStatus, getUserInfo } from '@/stores/user.js'
+// 直接导入组件，不使用懒加载
+import Login from '@/views/Login.vue'
+import Home from '@/views/Home.vue'
+import Members from '@/views/Members.vue'
+import RechargeRecords from '@/views/RechargeRecords.vue'
+import ConsumeRecords from '@/views/ConsumeRecords.vue'
+import Settings from '@/views/Settings.vue'
+import Employees from '@/views/Employees.vue'
 
 const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/Login.vue'),
+    component: Login,
     meta: { requiresAuth: false }
   },
   {
     path: '/',
     name: 'Home',
-    component: () => import('@/views/Home.vue'),
+    component: Home,
     meta: { requiresAuth: true }
   },
   {
     path: '/members',
     name: 'Members',
-    component: () => import('@/views/Members.vue'),
+    component: Members,
     meta: { requiresAuth: true }
   },
   {
     path: '/recharge-records',
     name: 'RechargeRecords',
-    component: () => import('@/views/RechargeRecords.vue'),
+    component: RechargeRecords,
     meta: { requiresAuth: true }
   },
   {
     path: '/consume-records',
     name: 'ConsumeRecords',
-    component: () => import('@/views/ConsumeRecords.vue'),
+    component: ConsumeRecords,
     meta: { requiresAuth: true }
   },
   {
     path: '/settings',
     name: 'Settings',
-    component: () => import('@/views/Settings.vue'),
+    component: Settings,
     meta: { requiresAuth: true }
   },
   {
     path: '/employees',
     name: 'Employees',
-    component: () => import('@/views/Employees.vue'),
+    component: Employees,
     meta: { requiresAuth: true }
+  },
+  // 临时添加重定向路由，确保员工管理页面可以访问
+  {
+    path: '/employees-test',
+    redirect: '/employees'
   },
   // 404页面重定向到登录页
   {
@@ -58,22 +71,23 @@ const router = createRouter({
 
 // 导航守卫，控制访问权限
 router.beforeEach((to, from, next) => {
+  console.log(`导航到: ${to.path}, 从: ${from.path}`);
   // 检查是否需要登录
   if (to.meta.requiresAuth) {
     console.log(`尝试访问受保护页面: ${to.path}`);
-    // 临时禁用登录检查以便调试
-    // if (checkLoginStatus()) {
-    //   next()
-    // } else {
-    //   // 未登录或登录已过期则跳转到登录页
-    //   next('/login')
-    // }
-    
-    // 临时允许所有页面访问
-    console.log('临时允许访问所有页面进行调试');
-    next();
+    // 检查登录状态
+    if (checkLoginStatus()) {
+      console.log('已登录，允许访问');
+      // 暂时屏蔽管理员权限检查，允许所有登录用户访问员工管理页面
+      next()
+    } else {
+      // 未登录或登录已过期则跳转到登录页
+      console.log('未登录或登录已过期，跳转到登录页');
+      next('/login')
+    }
   } else {
     // 不需要登录的页面直接访问
+    console.log('不需要登录的页面，直接访问');
     next()
   }
 })
